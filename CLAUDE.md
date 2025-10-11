@@ -103,11 +103,15 @@ npm run dev
 **MCP 工具系统**
 项目提供 10 个工具:
 
-**连接管理工具** (3个)
-1. **connect** - 建立命名数据库连接
+**连接管理工具** (4个)
+1. **connect** - 手动建立命名数据库连接（可选工具）
+   - 💡 **提示**: 如果已配置环境变量 `MYSQL_DATASOURCES`，服务器启动时会自动连接，无需调用此工具
+   - **主要用途**:
+     - 未配置环境变量时，手动建立连接
+     - 运行时动态添加新的数据库连接
    - 参数 `connectionName` (默认"default"): 连接的唯一标识符
    - 支持两种方式: 连接字符串(`username:password@host:port/database`)或独立参数
-   - 连接字符串中 port 和 database 是可选的,默认端口3306
+   - 连接字符串中 port 和 database 是可选的，默认端口3306
    - 示例: `root:password@localhost`, `root:password@localhost:3306/mydb`, `root:password@localhost/mydb`
    - 第一个连接会自动设为当前活动连接
 2. **list_connections** - 列出所有已建立的连接及其状态

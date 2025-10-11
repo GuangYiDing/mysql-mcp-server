@@ -160,7 +160,14 @@ function isDangerousSQL(sql: string): boolean {
 // 注册工具: 连接MySQL数据库
 server.tool(
   "connect",
-  "连接到MySQL数据库。支持管理多个命名连接，方便在不同项目间切换。\n支持两种连接方式:\n1. 连接字符串: username:password@host:port/database (port和database可选)\n2. 独立参数: 分别提供host、port、user、password、database",
+  "手动连接到MySQL数据库（可选工具）。\n\n" +
+  "💡 提示: 如果已通过环境变量 MYSQL_DATASOURCES 配置数据源，服务器启动时会自动连接，无需调用此工具。\n\n" +
+  "此工具主要用于:\n" +
+  "1. 未配置环境变量时，手动建立连接\n" +
+  "2. 运行时动态添加新的数据库连接\n\n" +
+  "支持两种连接方式:\n" +
+  "- 连接字符串: username:password@host:port/database (port和database可选)\n" +
+  "- 独立参数: 分别提供host、port、user、password、database",
   {
     connectionName: z
       .string()
@@ -170,7 +177,7 @@ server.tool(
       .string()
       .optional()
       .describe(
-        "MySQL连接字符串,格式: username:password@host:port/database (port和database可选,例如: root:password@localhost:3306/mydb 或 root:password@localhost)"
+        "MySQL连接字符串,格式: username:password@host:port/database (port和database可选)\n示例: root:password@localhost:3306/mydb 或 root:password@localhost"
       ),
     host: z.string().optional().describe("MySQL服务器地址(当不使用connectionString时)"),
     port: z.number().default(3306).describe("MySQL服务器端口(默认3306)"),
