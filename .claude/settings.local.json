@@ -8,7 +8,8 @@
       "Bash(gh:*)",
       "Bash(brew:*)",
       "Bash(git push)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(node:*)"
     ],
     "deny": [],
     "ask": []

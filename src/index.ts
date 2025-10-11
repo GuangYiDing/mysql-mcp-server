@@ -30,6 +30,8 @@ const pools = new Map<string, mysql.Pool>();
 const connectionConfigs = new Map<string, Omit<MySQLConfig, "password">>();
 // 当前活动连接
 let currentConnection: string | null = null;
+// 全局危险模式配置（从环境变量读取，默认false）
+let globalDangerMode = false;
 
 // 创建MCP服务器实例
 const server = new McpServer({
@@ -296,17 +298,21 @@ server.tool(
     try {
       connection = await getConnection(connectionName);
 
-      // 检查是否为危险操作
-      if (isDangerousSQL(sql) && !dangerousMode) {
+      // 检查是否为危险操作（参数优先，其次是全局配置）
+      const isDangerousModeEnabled = dangerousMode || globalDangerMode;
+
+      if (isDangerousSQL(sql) && !isDangerousModeEnabled) {
         return {
           content: [
             {
               type: "text",
               text:
                 "⚠️ 安全警告: 检测到危险SQL操作(INSERT/UPDATE/DELETE/DROP/ALTER等)。\n" +
-                "为了安全起见,执行此类操作必须显式设置 dangerousMode=true。\n\n" +
-                "示例:\n" +
-                '{"sql": "DELETE FROM users WHERE id=1", "dangerousMode": true}\n\n' +
+                "为了安全起见,执行此类操作需要启用危险模式。有两种方式:\n\n" +
+                "方式1: 在调用时设置 dangerousMode=true\n" +
+                '  {"sql": "DELETE FROM users WHERE id=1", "dangerousMode": true}\n\n' +
+                "方式2: 在 Claude Desktop 配置中设置全局危险模式\n" +
+                '  "env": {"MYSQL_DANGER_MODE": "true"}\n\n' +
                 "这是为了防止意外的数据修改或删除操作。",
             },
           ],
@@ -833,11 +839,88 @@ server.tool(
   }
 );
 
+// 解析简化的数据源配置字符串
+// 格式: |name1|connectionString1;|name2|connectionString2;
+function parseDatasourcesString(datasourcesStr: string): Record<string, string> {
+  const datasources: Record<string, string> = {};
+
+  // 按分号分割得到每个数据源配置
+  const parts = datasourcesStr.split(';').filter(part => part.trim());
+
+  for (const part of parts) {
+    // 匹配格式: |name|connectionString
+    const match = part.match(/^\|([^|]+)\|(.+)$/);
+    if (match) {
+      const [, name, connectionString] = match;
+      datasources[name.trim()] = connectionString.trim();
+    } else {
+      console.error(`跳过无效的数据源配置: ${part}`);
+    }
+  }
+
+  return datasources;
+}
+
+// 从环境变量初始化配置
+async function initializeFromEnvironment() {
+  // 1. 读取危险模式配置
+  const dangerModeEnv = process.env.MYSQL_DANGER_MODE;
+  if (dangerModeEnv) {
+    globalDangerMode = dangerModeEnv.toLowerCase() === "true";
+    console.error(`全局危险模式: ${globalDangerMode ? "启用" : "禁用"}`);
+  }
+
+  // 2. 读取数据源配置
+  const datasourcesEnv = process.env.MYSQL_DATASOURCES;
+  if (datasourcesEnv) {
+    try {
+      // 解析简化格式的数据源配置
+      const datasources = parseDatasourcesString(datasourcesEnv);
+
+      const datasourceCount = Object.keys(datasources).length;
+      if (datasourceCount === 0) {
+        console.error("未检测到有效的数据源配置");
+        return;
+      }
+
+      console.error(`检测到 ${datasourceCount} 个预配置数据源`);
+
+      // 初始化所有数据源连接
+      for (const [name, connectionString] of Object.entries(datasources)) {
+        try {
+          const config = parseConnectionString(connectionString);
+          initializePool(name, config);
+
+          // 测试连接
+          const connection = await getConnection(name);
+          await connection.ping();
+          connection.release();
+
+          console.error(`✓ 数据源 [${name}] 连接成功`);
+        } catch (error) {
+          console.error(`✗ 数据源 [${name}] 连接失败: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      }
+
+      if (pools.size > 0) {
+        console.error(`成功初始化 ${pools.size} 个数据源连接，当前活动连接: ${currentConnection}`);
+      }
+    } catch (error) {
+      console.error(`解析 MYSQL_DATASOURCES 环境变量失败: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  } else {
+    console.error("未检测到预配置数据源，需要手动使用 connect 工具建立连接");
+  }
+}
+
 // 主函数
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
   console.error("MySQL MCP Server 运行在 stdio");
+
+  // 从环境变量初始化配置
+  await initializeFromEnvironment();
 }
 
 main().catch((error) => {

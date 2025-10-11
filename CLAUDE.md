@@ -31,7 +31,7 @@ npm run dev
 - **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
 - **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
 
-添加配置:
+#### 基础配置（需手动连接）
 ```json
 {
   "mcpServers": {
@@ -43,7 +43,42 @@ npm run dev
 }
 ```
 
-⚠️ 必须使用绝对路径,修改后需要完全重启 Claude Desktop。
+#### 高级配置（自动连接数据源）✨ 推荐
+```json
+{
+  "mcpServers": {
+    "mysql": {
+      "command": "node",
+      "args": ["/ABSOLUTE/PATH/TO/mysql-mcp-server/build/index.js"],
+      "env": {
+        "MYSQL_DATASOURCES": "|dev|root:password@localhost:3306/dev_db;|test|test:pass@192.168.1.100/test_db;",
+        "MYSQL_DANGER_MODE": "false"
+      }
+    }
+  }
+}
+```
+
+**环境变量说明**:
+- `MYSQL_DATASOURCES`: 简化格式的数据源配置字符串
+  - 格式: `|连接名称|连接字符串;|连接名称2|连接字符串2;`
+  - `|名称|` 表示数据源名称（使用竖线包裹）
+  - `;` 作为多个数据源的分隔符（末尾可以有也可以没有分号）
+  - 连接字符串格式: `username:password@host:port/database` (port和database可选)
+  - 示例: `|dev|root:pass@localhost/db;|prod|user:pass@192.168.1.1:3306/prod_db;`
+  - 服务器启动时会自动初始化所有配置的连接
+  - 第一个连接会自动设为活动连接
+  - ✨ 无需转义引号，配置更简洁直观
+
+- `MYSQL_DANGER_MODE`: 全局危险模式开关 (`"true"` 或 `"false"`)
+  - `false`(默认): 执行 INSERT/UPDATE/DELETE 等危险操作时必须在调用时设置 `dangerousMode=true`
+  - `true`: 全局启用危险模式，所有危险操作无需额外确认
+  - ⚠️ 生产环境建议保持 `false`
+
+⚠️ 配置注意事项:
+- 必须使用绝对路径
+- 修改配置后需要完全重启 Claude Desktop
+- 密码会明文存储在配置文件中，请注意安全性
 
 ## 架构说明
 
@@ -83,7 +118,10 @@ npm run dev
 5. **query** - 执行 SELECT 查询
    - 可选参数 `connectionName`: 指定使用哪个连接,默认使用当前活动连接
 6. **execute** - 执行 INSERT/UPDATE/DELETE 等修改操作
-   - ⚠️ **危险模式保护**: 执行危险操作必须设置 `dangerousMode=true`
+   - ⚠️ **危险模式保护**: 执行危险操作需要启用危险模式
+   - 两种启用方式:
+     1. 参数方式: 调用时设置 `dangerousMode=true`
+     2. 全局方式: 在配置中设置 `MYSQL_DANGER_MODE="true"` (优先级低于参数方式)
    - 受保护的操作: INSERT, UPDATE, DELETE, DROP, ALTER, TRUNCATE, CREATE, RENAME, REPLACE
    - 这是为了防止意外的数据修改或删除操作
    - 可选参数 `connectionName`: 指定使用哪个连接
@@ -132,6 +170,32 @@ npm run dev
 - 使用 `StdioServerTransport` 通过 stdio 与 Claude Desktop 通信
 - 服务器启动后在 stderr 输出日志信息
 - MCP 协议通信通过 stdin/stdout 进行
+
+### 环境变量配置系统 (✨ 新特性)
+
+**工作原理**:
+1. Claude Desktop 通过配置文件的 `env` 字段传递环境变量给 MCP 服务器
+2. 服务器启动时 `initializeFromEnvironment()` 函数读取环境变量
+3. 自动解析并初始化配置的所有数据源连接
+4. 设置全局危险模式配置
+
+**启动流程**:
+```
+main()
+  → server.connect(transport)
+  → initializeFromEnvironment()
+    → 读取 MYSQL_DANGER_MODE
+    → 读取 MYSQL_DATASOURCES
+    → 解析 JSON 数据源配置
+    → 逐个初始化连接池并测试连接
+    → 输出启动日志
+```
+
+**优势**:
+- **即插即用**: 无需手动调用 connect 工具
+- **多环境支持**: 可预配置开发、测试、生产等多个环境
+- **安全控制**: 集中管理危险模式设置
+- **启动验证**: 服务器启动时验证所有连接可用性
 
 ## 常见开发任务
 
@@ -186,7 +250,39 @@ npm run dev
 
 ## 多连接使用示例
 
-### 典型工作流程
+### 方式一: 环境变量自动连接 (✨ 推荐)
+**配置 Claude Desktop**:
+```json
+{
+  "mcpServers": {
+    "mysql": {
+      "command": "node",
+      "args": ["/path/to/build/index.js"],
+      "env": {
+        "MYSQL_DATASOURCES": "|dev|root:pass@localhost/dev_db;|test|root:pass@localhost/test_db;|prod|root:pass@prod-server/prod_db;",
+        "MYSQL_DANGER_MODE": "false"
+      }
+    }
+  }
+}
+```
+
+**使用连接**:
+```typescript
+// 启动时已自动连接,直接使用
+list_connections()  // 显示: dev (活动), test, prod
+
+// 使用当前活动连接
+query({ sql: "SELECT * FROM users LIMIT 10" })  // 使用 dev 连接
+
+// 切换到其他连接
+switch_connection({ connectionName: "prod" })
+
+// 显式指定连接
+query({ sql: "SELECT COUNT(*) FROM orders", connectionName: "test" })
+```
+
+### 方式二: 手动连接
 ```typescript
 // 1. 建立多个连接
 connect({ connectionName: "dev", connectionString: "root:pass@localhost/dev_db" })
