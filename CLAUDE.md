@@ -71,9 +71,9 @@ npm run dev
   - ✨ 无需转义引号，配置更简洁直观
 
 - `MYSQL_DANGER_MODE`: 全局危险模式开关 (`"true"` 或 `"false"`)
-  - `false`(默认): 执行 INSERT/UPDATE/DELETE 等危险操作时必须在调用时设置 `dangerousMode=true`
-  - `true`: 全局启用危险模式，所有危险操作无需额外确认
-  - ⚠️ 生产环境建议保持 `false`
+  - `false`(默认): 禁用危险操作，execute 工具执行 INSERT/UPDATE/DELETE 等操作时会被拦截
+  - `true`: 启用危险模式，允许执行所有修改操作无需额外确认
+  - ⚠️ 生产环境强烈建议保持 `false`，避免误操作
 
 ⚠️ 配置注意事项:
 - 必须使用绝对路径
@@ -122,12 +122,11 @@ npm run dev
 5. **query** - 执行 SELECT 查询
    - 可选参数 `connectionName`: 指定使用哪个连接,默认使用当前活动连接
 6. **execute** - 执行 INSERT/UPDATE/DELETE 等修改操作
-   - ⚠️ **危险模式保护**: 执行危险操作需要启用危险模式
-   - 两种启用方式:
-     1. 参数方式: 调用时设置 `dangerousMode=true`
-     2. 全局方式: 在配置中设置 `MYSQL_DANGER_MODE="true"` (优先级低于参数方式)
+   - ⚠️ **危险模式保护**: 执行危险操作需要在配置中启用 `MYSQL_DANGER_MODE`
+   - 启用方式: 在 Claude Desktop 配置文件的 `env` 中设置 `"MYSQL_DANGER_MODE": "true"`
    - 受保护的操作: INSERT, UPDATE, DELETE, DROP, ALTER, TRUNCATE, CREATE, RENAME, REPLACE
    - 这是为了防止意外的数据修改或删除操作
+   - ⚠️ 生产环境建议保持 `false`，避免误操作
    - 可选参数 `connectionName`: 指定使用哪个连接
 7. **explain** - 查看 SQL 查询语句的执行计划,支持多种格式
    - `default`: 传统表格格式
@@ -237,7 +236,8 @@ main()
 
 4. **危险模式保护** (新增功能)
    - `isDangerousSQL()` 函数检测危险操作关键词
-   - execute 工具要求 `dangerousMode=true` 才能执行危险操作
+   - execute 工具通过环境变量 `MYSQL_DANGER_MODE` 控制危险操作权限
+   - 默认禁用危险操作，需在配置中显式启用
    - 受保护的操作: INSERT, UPDATE, DELETE, DROP, ALTER, TRUNCATE, CREATE, RENAME, REPLACE
    - 函数会移除 SQL 注释并检查语句开头,防止注入绕过
 

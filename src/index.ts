@@ -288,39 +288,39 @@ server.tool(
 // 注册工具: 执行SQL语句(INSERT, UPDATE, DELETE等)
 server.tool(
   "execute",
-  "执行SQL语句(INSERT, UPDATE, DELETE等修改操作)。\n⚠️ 安全提示: 执行危险操作(INSERT/UPDATE/DELETE/DROP/ALTER等)时,必须设置 dangerousMode=true",
+  "执行SQL语句(INSERT, UPDATE, DELETE等修改操作)。\n\n" +
+  "⚠️ 危险模式保护: 执行危险操作(INSERT/UPDATE/DELETE/DROP/ALTER等)需要在配置中启用 MYSQL_DANGER_MODE。\n" +
+  "这是为了防止意外的数据修改或删除操作。\n\n" +
+  "配置方式: 在 Claude Desktop 配置文件的 env 中设置 \"MYSQL_DANGER_MODE\": \"true\"",
   {
     sql: z.string().describe("要执行的SQL语句"),
-    dangerousMode: z
-      .boolean()
-      .default(false)
-      .describe(
-        "危险模式开关。执行INSERT/UPDATE/DELETE/DROP/ALTER等危险操作时必须设置为true"
-      ),
     database: z.string().optional().describe("切换到指定数据库(可选)"),
     connectionName: z.string().optional().describe("指定使用的连接名称(可选,默认使用当前活动连接)"),
   },
-  async ({ sql, dangerousMode, database, connectionName }) => {
+  async ({ sql, database, connectionName }) => {
     let connection;
     try {
       connection = await getConnection(connectionName);
 
-      // 检查是否为危险操作（参数优先，其次是全局配置）
-      const isDangerousModeEnabled = dangerousMode || globalDangerMode;
-
-      if (isDangerousSQL(sql) && !isDangerousModeEnabled) {
+      // 检查是否为危险操作
+      if (isDangerousSQL(sql) && !globalDangerMode) {
         return {
           content: [
             {
               type: "text",
               text:
-                "⚠️ 安全警告: 检测到危险SQL操作(INSERT/UPDATE/DELETE/DROP/ALTER等)。\n" +
-                "为了安全起见,执行此类操作需要启用危险模式。有两种方式:\n\n" +
-                "方式1: 在调用时设置 dangerousMode=true\n" +
-                '  {"sql": "DELETE FROM users WHERE id=1", "dangerousMode": true}\n\n' +
-                "方式2: 在 Claude Desktop 配置中设置全局危险模式\n" +
-                '  "env": {"MYSQL_DANGER_MODE": "true"}\n\n' +
-                "这是为了防止意外的数据修改或删除操作。",
+                "⚠️ 安全警告: 检测到危险SQL操作(INSERT/UPDATE/DELETE/DROP/ALTER等)。\n\n" +
+                "为了安全起见，执行此类操作需要在 Claude Desktop 配置中启用全局危险模式。\n\n" +
+                "配置方法:\n" +
+                "1. 打开 Claude Desktop 配置文件:\n" +
+                "   - macOS: ~/Library/Application Support/Claude/claude_desktop_config.json\n" +
+                "   - Windows: %APPDATA%\\Claude\\claude_desktop_config.json\n\n" +
+                "2. 在 mysql 服务器配置中添加:\n" +
+                '   "env": {\n' +
+                '     "MYSQL_DANGER_MODE": "true"\n' +
+                '   }\n\n' +
+                "3. 完全重启 Claude Desktop\n\n" +
+                "⚠️ 注意: 启用危险模式后，所有修改操作将无需确认。生产环境请谨慎使用！",
             },
           ],
           isError: true,
