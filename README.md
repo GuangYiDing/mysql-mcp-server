@@ -31,63 +31,61 @@ npm run build
 
 ## 使用方法
 
-### 在Claude for Desktop中配置
+### 在 Claude Code 中配置
 
-1. 打开Claude for Desktop配置文件:
-   - macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
-   - Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+提供两种配置方式：
 
-2. 添加服务器配置:
+#### 方式一：修改配置文件
 
-**基础配置**（最简单的方式）
+编辑配置文件 `~/.claude/settings.json`，添加以下配置：
+
 ```json
 {
   "mcpServers": {
-    "mysql": {
+    "mysql-mcp": {
+      "type": "stdio",
       "command": "node",
-      "args": ["/ABSOLUTE/PATH/TO/mysql-mcp-server/build/index.js"]
-    }
-  }
-}
-```
-
-**使用环境变量配置**（推荐用于生产环境，保护敏感信息）
-```json
-{
-  "mcpServers": {
-    "mysql": {
-      "command": "node",
-      "args": ["/ABSOLUTE/PATH/TO/mysql-mcp-server/build/index.js"],
+      "args": [
+        "/ABSOLUTE/PATH/TO/mysql-mcp-server/build/index.js"
+      ],
       "env": {
-        "MYSQL_DEV_HOST": "localhost",
-        "MYSQL_DEV_USER": "root",
-        "MYSQL_DEV_PASSWORD": "your_dev_password",
-        "MYSQL_DEV_DATABASE": "dev_db",
-        "MYSQL_PROD_HOST": "prod-server.example.com",
-        "MYSQL_PROD_USER": "app_user",
-        "MYSQL_PROD_PASSWORD": "your_prod_password",
-        "MYSQL_PROD_DATABASE": "prod_db"
+        "MYSQL_DATASOURCES": "|dev|username:pass@192.168.xx.xx:3306/xxx;",
+        "MYSQL_DANGER_MODE": "false"
       }
     }
   }
 }
 ```
 
+#### 方式二：使用命令行配置
+
+在终端执行以下命令：
+
+```bash
+claude mcp add --transport stdio mysql-mcp --scope user \
+  --env MYSQL_DATASOURCES="|dev|username:pass@192.168.xx.xx:3306/xxx;" \
+  --env MYSQL_DANGER_MODE=false \
+  -- node /ABSOLUTE/PATH/TO/mysql-mcp-server/build/index.js
+```
+
 **配置说明**:
 - `command`: Node.js 可执行文件路径
 - `args`: MCP 服务器脚本的绝对路径（必须是绝对路径）
-- `env`: 可选的环境变量配置
-  - 可以预先配置多个环境的连接信息
-  - 在运行时通过工具调用使用这些环境变量
-  - 避免在代码中硬编码敏感信息
+- `env`: 环境变量配置
+  - `MYSQL_DATASOURCES`: 数据源配置，格式为 `|连接名|连接字符串;`，可配置多个数据源用分号分隔
+  - `MYSQL_DANGER_MODE`: 危险模式开关，设置为 `"true"` 允许执行修改操作（INSERT/UPDATE/DELETE等）
 
-**使用环境变量的示例**:
-连接时可以引用环境变量：
+**数据源配置格式**:
 ```
-连接到开发数据库，名称为dev，使用环境变量中的配置
+|连接名1|username:password@host:port/database;|连接名2|username:password@host:port/database;
 ```
 
-3. 重启Claude for Desktop
+示例：
+```
+|dev|root:pass123@localhost:3306/dev_db;|prod|app_user:pass456@192.168.1.100:3306/prod_db;
+```
+
+配置完成后，重启 Claude Code 使配置生效。
 
 ### 使用示例
 
