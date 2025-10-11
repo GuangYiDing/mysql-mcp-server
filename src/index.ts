@@ -444,16 +444,22 @@ server.tool(
   }
 );
 
-// 注册工具: 查看表结构
+// 注册工具: 获取表的DDL信息
 server.tool(
   "describe_table",
-  "查看表结构",
+  "获取表的完整DDL信息,包括表结构、索引、约束、存储引擎等详细信息",
   {
     table: z.string().describe("表名称"),
     database: z.string().optional().describe("数据库名称(可选)"),
+    format: z
+      .enum(["ddl", "structure", "both"])
+      .default("both")
+      .describe(
+        "输出格式: ddl(仅DDL语句), structure(仅字段结构), both(DDL+字段结构,默认)"
+      ),
     connectionName: z.string().optional().describe("指定使用的连接名称(可选,默认使用当前活动连接)"),
   },
-  async ({ table, database, connectionName }) => {
+  async ({ table, database, format, connectionName }) => {
     let connection;
     try {
       connection = await getConnection(connectionName);
@@ -463,13 +469,63 @@ server.tool(
         await connection.query(`USE \`${database}\``);
       }
 
-      const [results] = await connection.query(`DESCRIBE \`${table}\``);
+      let outputText = "";
+
+      // 获取DDL信息
+      if (format === "ddl" || format === "both") {
+        const [createResults] = await connection.query(`SHOW CREATE TABLE \`${table}\``);
+        const createResult = (createResults as any)[0];
+
+        outputText += "=== 表DDL定义 ===\n\n";
+        outputText += createResult["Create Table"];
+        outputText += "\n";
+      }
+
+      // 获取字段结构
+      if (format === "structure" || format === "both") {
+        const [descResults] = await connection.query(`DESCRIBE \`${table}\``);
+
+        if (format === "both") {
+          outputText += "\n\n=== 字段结构详情 ===\n\n";
+        }
+        outputText += formatQueryResult(descResults);
+      }
+
+      // 获取索引信息
+      if (format === "both") {
+        const [indexResults] = await connection.query(`SHOW INDEX FROM \`${table}\``);
+
+        if (Array.isArray(indexResults) && indexResults.length > 0) {
+          outputText += "\n\n=== 索引信息 ===\n\n";
+          outputText += formatQueryResult(indexResults);
+        }
+      }
+
+      // 获取表状态信息
+      if (format === "both") {
+        const [statusResults] = await connection.query(`SHOW TABLE STATUS LIKE '${table}'`);
+
+        if (Array.isArray(statusResults) && statusResults.length > 0) {
+          const status = statusResults[0] as any;
+          outputText += "\n\n=== 表状态信息 ===\n\n";
+          outputText += `存储引擎: ${status.Engine}\n`;
+          outputText += `行格式: ${status.Row_format}\n`;
+          outputText += `表记录数: ${status.Rows}\n`;
+          outputText += `平均行长度: ${status.Avg_row_length} bytes\n`;
+          outputText += `数据大小: ${(status.Data_length / 1024).toFixed(2)} KB\n`;
+          outputText += `索引大小: ${(status.Index_length / 1024).toFixed(2)} KB\n`;
+          outputText += `字符集: ${status.Collation}\n`;
+          if (status.Comment) {
+            outputText += `表注释: ${status.Comment}\n`;
+          }
+        }
+      }
 
       return {
         content: [
           {
             type: "text",
-            text: formatQueryResult(results),
+            text: outputText,
           },
         ],
       };
@@ -478,7 +534,7 @@ server.tool(
         content: [
           {
             type: "text",
-            text: `获取表结构失败: ${error instanceof Error ? error.message : String(error)}`,
+            text: `获取表信息失败: ${error instanceof Error ? error.message : String(error)}`,
           },
         ],
         isError: true,

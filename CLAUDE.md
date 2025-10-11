@@ -95,7 +95,16 @@ npm run dev
    - 可选参数 `connectionName`: 指定使用哪个连接
 8. **list_databases** - 列出所有数据库
 9. **list_tables** - 列出表 (可选指定数据库)
-10. **describe_table** - 查看表结构
+10. **describe_table** - 获取表的完整DDL和详细信息 (✨ 增强功能)
+   - 支持三种输出格式:
+     - `ddl`: 仅显示 CREATE TABLE DDL语句
+     - `structure`: 仅显示字段结构(传统 DESCRIBE 输出)
+     - `both`: 显示完整信息(默认),包括:
+       - DDL定义语句
+       - 字段结构详情
+       - 索引信息
+       - 表状态(存储引擎、字符集、行数、数据大小、索引大小等)
+   - 可选参数 `connectionName`: 指定使用哪个连接
 
 所有数据库操作工具都支持 `connectionName` 可选参数来指定使用哪个连接,如果不指定则使用当前活动连接。
 
