@@ -411,12 +411,22 @@ server.tool(
     try {
       connection = await getConnection(connectionName);
 
-      // 如果指定了数据库,先切换
-      if (database) {
-        await connection.query(`USE \`${database}\``);
-      }
+      // 构建查询语句 - 获取表名、注释和创建时间
+      const whereClause = database
+        ? `table_schema = '${database.replace(/'/g, "''")}'`
+        : `table_schema = DATABASE()`;
 
-      const [results] = await connection.query("SHOW TABLES");
+      const sql = `
+        SELECT
+          table_name AS '表名',
+          table_comment AS '表注释',
+          create_time AS '创建时间'
+        FROM information_schema.tables
+        WHERE ${whereClause}
+        ORDER BY create_time DESC
+      `;
+
+      const [results] = await connection.query(sql);
 
       return {
         content: [

@@ -94,7 +94,11 @@ npm run dev
    - `analyze`: 实际执行并显示统计信息(MySQL 8.0.18+)
    - 可选参数 `connectionName`: 指定使用哪个连接
 8. **list_databases** - 列出所有数据库
-9. **list_tables** - 列出表 (可选指定数据库)
+9. **list_tables** - 列出表及详细信息 (✨ 增强功能)
+   - 显示表名、表注释和创建时间
+   - 按创建时间倒序排列（最新的表在前面）
+   - 可选参数 `database`: 指定数据库名称
+   - 可选参数 `connectionName`: 指定使用哪个连接
 10. **describe_table** - 获取表的完整DDL和详细信息 (✨ 增强功能)
    - 支持三种输出格式:
      - `ddl`: 仅显示 CREATE TABLE DDL语句
