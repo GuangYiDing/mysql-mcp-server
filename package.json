@@ -19,8 +19,16 @@
     "database",
     "model-context-protocol"
   ],
-  "author": "",
+  "author": "GuangYiDing",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/GuangYiDing/mysql-mcp-server.git"
+  },
+  "homepage": "https://github.com/GuangYiDing/mysql-mcp-server#readme",
+  "bugs": {
+    "url": "https://github.com/GuangYiDing/mysql-mcp-server/issues"
+  },
   "files": [
     "build"
   ],
