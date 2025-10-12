@@ -1,6 +1,6 @@
 {
   "name": "@nolimit35/mysql-mcp-server",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "MySQL MCP Server - A Model Context Protocol server for MySQL database operations",
   "type": "module",
   "main": "./build/index.js",
