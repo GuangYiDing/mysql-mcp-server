@@ -1,41 +1,51 @@
-# MySQL MCP Server
+# 🐬 MySQL MCP Server
 
-一个用于MySQL数据库操作的Model Context Protocol (MCP)服务器。
+一个用于 MySQL 数据库操作的 Model Context Protocol (MCP) 服务器。
 
-## 功能特性
+## ✨ 功能特性
 
-这个MCP服务器提供了以下工具来与MySQL数据库交互:
+这个 MCP 服务器提供了以下工具来与 MySQL 数据库交互：
 
-### 连接管理 ✨ (支持多连接)
-- **connect** - 建立命名数据库连接,支持同时管理多个连接
+### 🔌 连接管理 (支持多连接)
+- **connect** - 建立命名数据库连接，支持同时管理多个连接
 - **list_connections** - 列出所有已建立的连接及其状态
 - **switch_connection** - 切换当前活动连接
 - **disconnect** - 断开指定连接
 
-### 查询操作
-- **query** - 执行SQL查询语句(SELECT)
-- **execute** - 执行SQL修改语句(INSERT, UPDATE, DELETE等)
-- **explain** - 查看SQL查询语句的执行计划,用于性能分析和优化
+### 📊 查询操作
+- **query** - 执行 SQL 查询语句（SELECT）
+- **execute** - 执行 SQL 修改语句（INSERT, UPDATE, DELETE 等）
+- **explain** - 查看 SQL 查询语句的执行计划，用于性能分析和优化
 
-### 数据库管理
+### 🗄️ 数据库管理
 - **list_databases** - 列出所有数据库
 - **list_tables** - 列出指定数据库中的所有表
 - **describe_table** - 查看表结构
 
-## 安装
+## 📦 安装
+
+### 通过 npm 安装（推荐）
 
 ```bash
+npm install -g @nolimit35/mysql-mcp-server
+```
+
+### 从源码构建
+
+```bash
+git clone https://github.com/GuangYiDing/mysql-mcp-server.git
+cd mysql-mcp-server
 npm install
 npm run build
 ```
 
-## 使用方法
+## 🚀 使用方法
 
 ### 在 Claude Code 中配置
 
-提供两种配置方式：
+提供多种配置方式：
 
-#### 方式一：修改配置文件
+#### 方式一：使用 npx（推荐，无需全局安装）
 
 编辑配置文件 `~/.claude/settings.json`，添加以下配置：
 
@@ -43,10 +53,10 @@ npm run build
 {
   "mcpServers": {
     "mysql-mcp": {
-      "type": "stdio",
-      "command": "node",
+      "command": "npx",
       "args": [
-        "/ABSOLUTE/PATH/TO/mysql-mcp-server/build/index.js"
+        "-y",
+        "@nolimit35/mysql-mcp-server"
       ],
       "env": {
         "MYSQL_DATASOURCES": "|dev|username:pass@192.168.xx.xx:3306/xxx;",
@@ -59,27 +69,58 @@ npm run build
 }
 ```
 
-#### 方式二：使用命令行配置
+#### 方式二：使用全局安装的包
+
+如果已全局安装，可以直接使用：
+
+```json
+{
+  "mcpServers": {
+    "mysql-mcp": {
+      "command": "mysql-mcp-server",
+      "args": [],
+      "env": {
+        "MYSQL_DATASOURCES": "|dev|username:pass@192.168.xx.xx:3306/xxx;",
+        "MYSQL_DANGER_MODE": "false",
+        "LOG_LEVEL": "INFO",
+        "LOG_COLORS": "true"
+      }
+    }
+  }
+}
+```
+
+#### 方式三：使用命令行配置
 
 在终端执行以下命令：
 
 ```bash
+# 使用 npx
 claude mcp add --transport stdio mysql-mcp --scope user \
   --env MYSQL_DATASOURCES="|dev|username:pass@192.168.xx.xx:3306/xxx;" \
   --env MYSQL_DANGER_MODE=false \
-  -- node /ABSOLUTE/PATH/TO/mysql-mcp-server/build/index.js
+  -- npx -y @nolimit35/mysql-mcp-server
+
+# 或使用全局安装的包
+claude mcp add --transport stdio mysql-mcp --scope user \
+  --env MYSQL_DATASOURCES="|dev|username:pass@192.168.xx.xx:3306/xxx;" \
+  --env MYSQL_DANGER_MODE=false \
+  -- mysql-mcp-server
 ```
 
-**配置说明**:
-- `command`: Node.js 可执行文件路径
-- `args`: MCP 服务器脚本的绝对路径（必须是绝对路径）
+#### ⚙️ 配置说明
+
+- `command`: 执行命令（`npx` 或 `mysql-mcp-server`）
+- `args`: 命令参数
+  - 使用 `npx` 时：`["-y", "@nolimit35/mysql-mcp-server"]`
+  - 使用全局包时：`[]`
 - `env`: 环境变量配置
   - `MYSQL_DATASOURCES`: 数据源配置，格式为 `|连接名|连接字符串;`，可配置多个数据源用分号分隔
-  - `MYSQL_DANGER_MODE`: 危险模式开关，设置为 `"true"` 允许执行修改操作（INSERT/UPDATE/DELETE等）
+  - `MYSQL_DANGER_MODE`: 危险模式开关，设置为 `"true"` 允许执行修改操作（INSERT/UPDATE/DELETE 等）
   - `LOG_LEVEL`: 日志级别，可选值：`DEBUG`、`INFO`（默认）、`WARN`、`ERROR`、`OFF`
   - `LOG_COLORS`: 是否启用彩色日志输出，默认为 `"true"`
 
-**数据源配置格式**:
+#### 📝 数据源配置格式
 ```
 |连接名1|username:password@host:port/database;|连接名2|username:password@host:port/database;
 ```
@@ -91,9 +132,9 @@ claude mcp add --transport stdio mysql-mcp --scope user \
 
 配置完成后，重启 Claude Code 使配置生效。
 
-### 使用示例
+### 💡 使用示例
 
-#### 基础操作
+#### 📚 基础操作
 
 1. **连接数据库 (使用连接字符串)**:
    ```
@@ -141,7 +182,7 @@ claude mcp add --transport stdio mysql-mcp --scope user \
    查看这条SQL语句的执行计划: SELECT * FROM users WHERE age > 25
    ```
 
-#### 多连接管理示例 ✨
+#### 🔄 多连接管理示例
 
 **场景1: 跨环境数据对比**
 ```
@@ -172,11 +213,11 @@ claude mcp add --transport stdio mysql-mcp --scope user \
 6. 完成后使用disconnect关闭不需要的连接
 ```
 
-## 工具详情
+## 🛠️ 工具详情
 
-### 连接管理工具
+### 🔌 连接管理工具
 
-#### connect
+#### connect 🔗
 建立命名数据库连接,支持同时管理多个连接
 
 **参数**:
@@ -197,7 +238,7 @@ claude mcp add --transport stdio mysql-mcp --scope user \
 - 不使用 `connectionString` 时,必须提供 `host`、`user` 和 `password`
 - 第一个建立的连接会自动设为当前活动连接
 
-#### list_connections
+#### list_connections 📋
 列出所有已建立的数据库连接及其状态
 
 **参数**: 无
@@ -222,15 +263,15 @@ claude mcp add --transport stdio mysql-mcp --scope user \
    数据库: prod_db
 ```
 
-#### switch_connection
+#### switch_connection 🔀
 切换当前活动的数据库连接
 
 **参数**:
 - `connectionName` (string, 必需) - 要切换到的连接名称
 
-**使用场景**: 在多个数据库之间快速切换,后续操作会使用切换后的连接
+**使用场景**: 在多个数据库之间快速切换，后续操作会使用切换后的连接
 
-#### disconnect
+#### disconnect ❌
 断开指定的数据库连接
 
 **参数**:
@@ -240,18 +281,18 @@ claude mcp add --transport stdio mysql-mcp --scope user \
 - 如果断开的是当前活动连接,会自动切换到其他可用连接
 - 如果没有其他连接,需要重新使用 `connect` 建立连接
 
-### 数据库操作工具
+### 📊 数据库操作工具
 
-#### query
-执行SQL查询语句(SELECT)
+#### query 🔍
+执行 SQL 查询语句（SELECT）
 
 **参数**:
-- `sql` (string, 必需) - 要执行的SQL查询语句
+- `sql` (string, 必需) - 要执行的 SQL 查询语句
 - `database` (string, 可选) - 切换到指定数据库
-- `connectionName` (string, 可选) - 指定使用的连接,默认使用当前活动连接
+- `connectionName` (string, 可选) - 指定使用的连接，默认使用当前活动连接
 
-#### execute
-执行SQL修改语句(INSERT, UPDATE, DELETE等)
+#### execute ⚡
+执行 SQL 修改语句（INSERT, UPDATE, DELETE 等）
 
 ⚠️ **危险模式保护**: 为了防止意外的数据修改或删除,执行危险操作时必须显式启用 `dangerousMode` 参数。
 
@@ -282,29 +323,29 @@ claude mcp add --transport stdio mysql-mcp --scope user \
 {"sql": "SHOW TABLES"}
 ```
 
-#### list_databases
+#### list_databases 🗄️
 列出所有数据库
 
 **参数**:
-- `connectionName` (string, 可选) - 指定使用的连接,默认使用当前活动连接
+- `connectionName` (string, 可选) - 指定使用的连接，默认使用当前活动连接
 
-#### list_tables
+#### list_tables 📑
 列出指定数据库中的所有表
 
 **参数**:
-- `database` (string, 可选) - 数据库名称(如果已连接到数据库)
-- `connectionName` (string, 可选) - 指定使用的连接,默认使用当前活动连接
+- `database` (string, 可选) - 数据库名称（如果已连接到数据库）
+- `connectionName` (string, 可选) - 指定使用的连接，默认使用当前活动连接
 
-#### describe_table
+#### describe_table 📋
 查看表结构
 
 **参数**:
 - `table` (string, 必需) - 表名称
 - `database` (string, 可选) - 数据库名称
-- `connectionName` (string, 可选) - 指定使用的连接,默认使用当前活动连接
+- `connectionName` (string, 可选) - 指定使用的连接，默认使用当前活动连接
 
-#### explain
-查看SQL查询语句的执行计划,用于分析和优化查询性能
+#### explain 📈
+查看 SQL 查询语句的执行计划，用于分析和优化查询性能
 
 **参数**:
 - `sql` (string, 必需) - 要分析的SQL查询语句
@@ -335,11 +376,11 @@ EXPLAIN ANALYZE SELECT * FROM users WHERE age > 25
 - `analyze` 格式会实际执行查询语句,请谨慎在生产环境使用
 - `tree` 和 `analyze` 格式需要较新版本的MySQL支持
 
-## 日志配置
+## 📝 日志配置
 
 本服务器提供了灵活的日志系统，支持不同的日志级别和输出格式。
 
-### 日志级别
+### 📊 日志级别
 
 通过环境变量 `LOG_LEVEL` 配置日志级别，可选值：
 
@@ -364,14 +405,14 @@ EXPLAIN ANALYZE SELECT * FROM users WHERE age > 25
 2025-01-15T10:30:45.456Z [ERROR] 数据源 [prod] 连接失败: Connection timeout
 ```
 
-### 彩色输出
+### 🎨 彩色输出
 
 通过环境变量 `LOG_COLORS` 控制是否启用彩色日志输出（默认启用）：
 
 - `LOG_COLORS=true` - 启用彩色输出（推荐用于终端查看）
 - `LOG_COLORS=false` - 禁用彩色输出（推荐用于日志文件）
 
-### 配置示例
+### ⚙️ 配置示例
 
 **开发环境配置**（详细日志）：
 ```json
@@ -403,18 +444,18 @@ EXPLAIN ANALYZE SELECT * FROM users WHERE age > 25
 }
 ```
 
-## 安全注意事项
+## 🔒 安全注意事项
 
-⚠️ **重要**:
+⚠️ **重要**：
 
-### 连接安全
+### 🛡️ 连接安全
 - 不要在生产环境中存储明文密码
 - 建议使用环境变量来存储敏感信息
 - 限制数据库用户权限,只授予必要的操作权限
 - 使用防火墙规则限制数据库访问
 
-### 操作安全 - 危险模式保护
-为了防止意外的数据修改或删除,本服务器实现了**危险模式保护**机制:
+### ⚠️ 操作安全 - 危险模式保护
+为了防止意外的数据修改或删除，本服务器实现了**危险模式保护**机制：
 
 - **默认安全**: 所有危险操作(INSERT/UPDATE/DELETE/DROP/ALTER等)默认被拒绝
 - **显式确认**: 必须显式设置 `dangerousMode=true` 才能执行危险操作
@@ -432,36 +473,42 @@ EXPLAIN ANALYZE SELECT * FROM users WHERE age > 25
 3. 生产环境中谨慎使用 `DROP` 和 `TRUNCATE` 操作
 4. 始终使用 `WHERE` 子句限制 `UPDATE` 和 `DELETE` 的影响范围
 
-## 开发
+## 🛠️ 开发
 
 ```bash
+# 克隆项目
+git clone https://github.com/GuangYiDing/mysql-mcp-server.git
+cd mysql-mcp-server
+
 # 安装依赖
 npm install
 
 # 构建项目
 npm run build
 
-# 开发模式(监听文件变化)
+# 开发模式（监听文件变化）
 npm run dev
 ```
 
-## 技术栈
+## 🔧 技术栈
 
-- **TypeScript** - 类型安全的JavaScript
+- **TypeScript** - 类型安全的 JavaScript
 - **@modelcontextprotocol/sdk** - MCP SDK
-- **mysql2** - MySQL数据库驱动
+- **mysql2** - MySQL 数据库驱动
 - **zod** - 参数验证
 
-## 许可证
+## 📄 许可证
 
 MIT
 
-## 贡献
+## 🤝 贡献
 
-欢迎提交问题和拉取请求!
+欢迎提交问题和拉取请求！
 
-## 相关资源
+## 🔗 相关资源
 
 - [Model Context Protocol 文档](https://modelcontextprotocol.io)
 - [MySQL 文档](https://dev.mysql.com/doc/)
-- [Claude for Desktop](https://claude.ai/download)
+- [Claude Code](https://claude.ai/download)
+- [npm 包地址](https://www.npmjs.com/package/@nolimit35/mysql-mcp-server)
+- [GitHub 仓库](https://github.com/GuangYiDing/mysql-mcp-server)
