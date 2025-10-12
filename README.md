@@ -50,7 +50,9 @@ npm run build
       ],
       "env": {
         "MYSQL_DATASOURCES": "|dev|username:pass@192.168.xx.xx:3306/xxx;",
-        "MYSQL_DANGER_MODE": "false"
+        "MYSQL_DANGER_MODE": "false",
+        "LOG_LEVEL": "INFO",
+        "LOG_COLORS": "true"
       }
     }
   }
@@ -74,6 +76,8 @@ claude mcp add --transport stdio mysql-mcp --scope user \
 - `env`: 环境变量配置
   - `MYSQL_DATASOURCES`: 数据源配置，格式为 `|连接名|连接字符串;`，可配置多个数据源用分号分隔
   - `MYSQL_DANGER_MODE`: 危险模式开关，设置为 `"true"` 允许执行修改操作（INSERT/UPDATE/DELETE等）
+  - `LOG_LEVEL`: 日志级别，可选值：`DEBUG`、`INFO`（默认）、`WARN`、`ERROR`、`OFF`
+  - `LOG_COLORS`: 是否启用彩色日志输出，默认为 `"true"`
 
 **数据源配置格式**:
 ```
@@ -330,6 +334,74 @@ EXPLAIN ANALYZE SELECT * FROM users WHERE age > 25
 **注意**:
 - `analyze` 格式会实际执行查询语句,请谨慎在生产环境使用
 - `tree` 和 `analyze` 格式需要较新版本的MySQL支持
+
+## 日志配置
+
+本服务器提供了灵活的日志系统，支持不同的日志级别和输出格式。
+
+### 日志级别
+
+通过环境变量 `LOG_LEVEL` 配置日志级别，可选值：
+
+| 级别 | 说明 | 用途 |
+|-----|------|------|
+| `DEBUG` | 调试信息 | 开发环境，输出详细的调试信息 |
+| `INFO` | 一般信息（默认） | 生产环境，输出正常的运行信息 |
+| `WARN` | 警告信息 | 输出需要关注但不影响运行的警告 |
+| `ERROR` | 错误信息 | 仅输出错误信息 |
+| `OFF` | 关闭日志 | 完全关闭日志输出 |
+
+### 日志格式
+
+日志输出格式为：
+```
+<时间戳> [级别] <消息> [数据]
+```
+
+示例：
+```
+2025-01-15T10:30:45.123Z [INFO] MySQL连接池已初始化: [dev] localhost:3306
+2025-01-15T10:30:45.456Z [ERROR] 数据源 [prod] 连接失败: Connection timeout
+```
+
+### 彩色输出
+
+通过环境变量 `LOG_COLORS` 控制是否启用彩色日志输出（默认启用）：
+
+- `LOG_COLORS=true` - 启用彩色输出（推荐用于终端查看）
+- `LOG_COLORS=false` - 禁用彩色输出（推荐用于日志文件）
+
+### 配置示例
+
+**开发环境配置**（详细日志）：
+```json
+{
+  "env": {
+    "LOG_LEVEL": "DEBUG",
+    "LOG_COLORS": "true"
+  }
+}
+```
+
+**生产环境配置**（标准日志）：
+```json
+{
+  "env": {
+    "LOG_LEVEL": "INFO",
+    "LOG_COLORS": "false"
+  }
+}
+```
+
+**静默模式**（仅错误）：
+```json
+{
+  "env": {
+    "LOG_LEVEL": "ERROR",
+    "LOG_COLORS": "false"
+  }
+}
+```
 
 ## 安全注意事项
 

@@ -4,6 +4,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import mysql from "mysql2/promise";
+import { logger } from "./logger.js";
 
 // MySQL连接配置接口
 interface MySQLConfig {
@@ -100,7 +101,7 @@ function initializePool(name: string, config: MySQLConfig) {
     currentConnection = name;
   }
 
-  console.error(`MySQL连接池已初始化: [${name}] ${config.host}:${config.port}`);
+  logger.info(`MySQL连接池已初始化: [${name}] ${config.host}:${config.port}`);
 }
 
 // 获取连接
@@ -861,7 +862,7 @@ function parseDatasourcesString(datasourcesStr: string): Record<string, string> 
       const [, name, connectionString] = match;
       datasources[name.trim()] = connectionString.trim();
     } else {
-      console.error(`跳过无效的数据源配置: ${part}`);
+      logger.warn(`跳过无效的数据源配置: ${part}`);
     }
   }
 
@@ -874,7 +875,9 @@ async function initializeFromEnvironment() {
   const dangerModeEnv = process.env.MYSQL_DANGER_MODE;
   if (dangerModeEnv) {
     globalDangerMode = dangerModeEnv.toLowerCase() === "true";
-    console.error(`全局危险模式: ${globalDangerMode ? "启用" : "禁用"}`);
+    logger.info(`全局危险模式: ${globalDangerMode ? "启用" : "禁用"} (通过环境变量配置)`);
+  } else {
+    logger.info(`全局危险模式: 禁用 (默认值，未配置 MYSQL_DANGER_MODE 环境变量)`);
   }
 
   // 2. 读取数据源配置
@@ -886,11 +889,11 @@ async function initializeFromEnvironment() {
 
       const datasourceCount = Object.keys(datasources).length;
       if (datasourceCount === 0) {
-        console.error("未检测到有效的数据源配置");
+        logger.warn("未检测到有效的数据源配置");
         return;
       }
 
-      console.error(`检测到 ${datasourceCount} 个预配置数据源`);
+      logger.info(`检测到 ${datasourceCount} 个预配置数据源`);
 
       // 初始化所有数据源连接
       for (const [name, connectionString] of Object.entries(datasources)) {
@@ -903,20 +906,20 @@ async function initializeFromEnvironment() {
           await connection.ping();
           connection.release();
 
-          console.error(`✓ 数据源 [${name}] 连接成功`);
+          logger.info(`✓ 数据源 [${name}] 连接成功`);
         } catch (error) {
-          console.error(`✗ 数据源 [${name}] 连接失败: ${error instanceof Error ? error.message : String(error)}`);
+          logger.error(`✗ 数据源 [${name}] 连接失败: ${error instanceof Error ? error.message : String(error)}`);
         }
       }
 
       if (pools.size > 0) {
-        console.error(`成功初始化 ${pools.size} 个数据源连接，当前活动连接: ${currentConnection}`);
+        logger.info(`成功初始化 ${pools.size} 个数据源连接，当前活动连接: ${currentConnection}`);
       }
     } catch (error) {
-      console.error(`解析 MYSQL_DATASOURCES 环境变量失败: ${error instanceof Error ? error.message : String(error)}`);
+      logger.error(`解析 MYSQL_DATASOURCES 环境变量失败: ${error instanceof Error ? error.message : String(error)}`);
     }
   } else {
-    console.error("未检测到预配置数据源，需要手动使用 connect 工具建立连接");
+    logger.info("未检测到预配置数据源，需要手动使用 connect 工具建立连接");
   }
 }
 
@@ -924,13 +927,13 @@ async function initializeFromEnvironment() {
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("MySQL MCP Server 运行在 stdio");
+  logger.info("MySQL MCP Server 运行在 stdio");
 
   // 从环境变量初始化配置
   await initializeFromEnvironment();
 }
 
 main().catch((error) => {
-  console.error("启动服务器时发生致命错误:", error);
+  logger.error("启动服务器时发生致命错误:", error);
   process.exit(1);
 });
