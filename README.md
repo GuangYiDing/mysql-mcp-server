@@ -1,5 +1,11 @@
 # 🐬 MySQL MCP Server
 
+[![npm version](https://img.shields.io/npm/v/@nolimit35/mysql-mcp-server?color=blue)](https://www.npmjs.com/package/@nolimit35/mysql-mcp-server)
+[![CI](https://github.com/GuangYiDing/mysql-mcp-server/actions/workflows/ci.yml/badge.svg)](https://github.com/GuangYiDing/mysql-mcp-server/actions/workflows/ci.yml)
+[![Publish](https://github.com/GuangYiDing/mysql-mcp-server/actions/workflows/publish.yml/badge.svg)](https://github.com/GuangYiDing/mysql-mcp-server/actions/workflows/publish.yml)
+[![npm downloads](https://img.shields.io/npm/dm/@nolimit35/mysql-mcp-server)](https://www.npmjs.com/package/@nolimit35/mysql-mcp-server)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 一个用于 MySQL 数据库操作的 Model Context Protocol (MCP) 服务器。
 
 ## ✨ 功能特性
