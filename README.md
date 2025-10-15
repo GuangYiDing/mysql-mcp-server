@@ -1,5 +1,7 @@
 # 🐬 MySQL MCP Server
 
+**简体中文** | [English](README.en.md)
+
 [![npm version](https://img.shields.io/npm/v/@nolimit35/mysql-mcp-server?color=blue)](https://www.npmjs.com/package/@nolimit35/mysql-mcp-server)
 [![CI](https://github.com/GuangYiDing/mysql-mcp-server/actions/workflows/ci.yml/badge.svg)](https://github.com/GuangYiDing/mysql-mcp-server/actions/workflows/ci.yml)
 [![Publish](https://github.com/GuangYiDing/mysql-mcp-server/actions/workflows/publish.yml/badge.svg)](https://github.com/GuangYiDing/mysql-mcp-server/actions/workflows/publish.yml)
@@ -75,51 +77,21 @@ npm run build
 }
 ```
 
-#### 方式二：使用全局安装的包
-
-如果已全局安装，可以直接使用：
-
-```json
-{
-  "mcpServers": {
-    "mysql-mcp": {
-      "command": "mysql-mcp-server",
-      "args": [],
-      "env": {
-        "MYSQL_DATASOURCES": "|dev|username:pass@192.168.xx.xx:3306/xxx;",
-        "MYSQL_DANGER_MODE": "false",
-        "LOG_LEVEL": "INFO",
-        "LOG_COLORS": "true"
-      }
-    }
-  }
-}
-```
-
-#### 方式三：使用命令行配置
+#### 方式二：使用命令行配置
 
 在终端执行以下命令：
 
 ```bash
-# 使用 npx
 claude mcp add --transport stdio mysql-mcp --scope user \
   --env MYSQL_DATASOURCES="|dev|username:pass@192.168.xx.xx:3306/xxx;" \
   --env MYSQL_DANGER_MODE=false \
   -- npx -y @nolimit35/mysql-mcp-server
-
-# 或使用全局安装的包
-claude mcp add --transport stdio mysql-mcp --scope user \
-  --env MYSQL_DATASOURCES="|dev|username:pass@192.168.xx.xx:3306/xxx;" \
-  --env MYSQL_DANGER_MODE=false \
-  -- mysql-mcp-server
 ```
 
 #### ⚙️ 配置说明
 
-- `command`: 执行命令（`npx` 或 `mysql-mcp-server`）
-- `args`: 命令参数
-  - 使用 `npx` 时：`["-y", "@nolimit35/mysql-mcp-server"]`
-  - 使用全局包时：`[]`
+- `command`: 执行命令（`npx`）
+- `args`: 命令参数 `["-y", "@nolimit35/mysql-mcp-server"]`
 - `env`: 环境变量配置
   - `MYSQL_DATASOURCES`: 数据源配置，格式为 `|连接名|连接字符串;`，可配置多个数据源用分号分隔
   - `MYSQL_DANGER_MODE`: 危险模式开关，设置为 `"true"` 允许执行修改操作（INSERT/UPDATE/DELETE 等）
