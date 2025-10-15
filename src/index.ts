@@ -161,67 +161,93 @@ function isDangerousSQL(sql: string): boolean {
 // 注册工具: 连接MySQL数据库
 server.tool(
   "connect",
-  "手动连接到MySQL数据库（可选工具）。\n\n" +
-  "💡 提示: 如果已通过环境变量 MYSQL_DATASOURCES 配置数据源，服务器启动时会自动连接，无需调用此工具。\n\n" +
-  "此工具主要用于:\n" +
-  "1. 未配置环境变量时，手动建立连接\n" +
-  "2. 运行时动态添加新的数据库连接\n\n" +
-  "支持两种连接方式:\n" +
-  "- 连接字符串: username:password@host:port/database (port和database可选)\n" +
-  "- 独立参数: 分别提供host、port、user、password、database",
+  "连接到预配置的MySQL数据源。\n\n" +
+  "⚠️ 重要提示: 此工具只能连接到通过环境变量 MYSQL_DATASOURCES 预配置的数据源。\n\n" +
+  "如果连接失败，请检查 MCP 配置文件中的环境变量配置:\n" +
+  "配置示例:\n" +
+  '{\n' +
+  '  "mcpServers": {\n' +
+  '    "mysql": {\n' +
+  '      "command": "npx",\n' +
+  '      "args": ["-y", "@nolimit35/mysql-mcp-serve"],\n' +
+  '      "env": {\n' +
+  '        "MYSQL_DATASOURCES": "|local|root:password@localhost:3306/mydb;|prod|user:pass@prod.example.com/database"\n' +
+  '      }\n' +
+  '    }\n' +
+  '  }\n' +
+  '}\n\n' +
+  "数据源格式: |name1|user:pass@host:port/db;|name2|user:pass@host:port/db",
   {
     connectionName: z
       .string()
-      .default("default")
-      .describe("连接名称,用于标识此连接(如'project1', 'production')。默认为'default'"),
-    connectionString: z
-      .string()
-      .optional()
-      .describe(
-        "MySQL连接字符串,格式: username:password@host:port/database (port和database可选)\n示例: root:password@localhost:3306/mydb 或 root:password@localhost"
-      ),
-    host: z.string().optional().describe("MySQL服务器地址(当不使用connectionString时)"),
-    port: z.number().default(3306).describe("MySQL服务器端口(默认3306)"),
-    user: z.string().optional().describe("MySQL用户名(当不使用connectionString时)"),
-    password: z.string().optional().describe("MySQL密码(当不使用connectionString时)"),
-    database: z.string().optional().describe("数据库名称(可选)"),
+      .describe("要连接的数据源名称(必须是在环境变量 MYSQL_DATASOURCES 中预配置的名称)"),
   },
-  async ({ connectionName, connectionString, host, port, user, password, database }) => {
+  async ({ connectionName }) => {
     try {
-      let config: MySQLConfig;
-
-      // 优先使用连接字符串
-      if (connectionString) {
-        config = parseConnectionString(connectionString);
-      } else {
-        // 使用独立参数
-        if (!host || !user || !password) {
-          throw new Error(
-            "当不使用connectionString时,必须提供host、user和password参数"
-          );
+      // 检查连接是否在预配置的连接池中
+      if (!pools.has(connectionName)) {
+        const availableConnections = Array.from(pools.keys());
+        
+        if (availableConnections.length === 0) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: 
+                  `❌ 未找到任何预配置的数据源\n\n` +
+                  `请在 Claude Desktop 配置文件中正确配置 MYSQL_DATASOURCES 环境变量。\n\n` +
+                  `配置文件位置:\n` +
+                  `- macOS: ~/Library/Application Support/Claude/claude_desktop_config.json\n` +
+                  `- Windows: %APPDATA%\\Claude\\claude_desktop_config.json\n\n` +
+                  `配置示例:\n` +
+                  `"env": {\n` +
+                  `  "MYSQL_DATASOURCES": "|local|root:password@localhost:3306/mydb;|prod|user:pass@prod.example.com/database"\n` +
+                  `}\n\n` +
+                  `配置完成后需要完全重启 Claude Desktop。`,
+              },
+            ],
+            isError: true,
+          };
         }
-        config = { host, port, user, password, database };
+        
+        return {
+          content: [
+            {
+              type: "text",
+              text: 
+                `❌ 数据源 "${connectionName}" 未在环境变量中配置\n\n` +
+                `可用的预配置数据源: ${availableConnections.join(", ")}\n\n` +
+                `如需添加新数据源，请在 Claude Desktop 配置文件的 MYSQL_DATASOURCES 环境变量中添加:\n` +
+                `|${connectionName}|username:password@host:port/database\n\n` +
+                `配置文件位置:\n` +
+                `- macOS: ~/Library/Application Support/Claude/claude_desktop_config.json\n` +
+                `- Windows: %APPDATA%\\Claude\\claude_desktop_config.json\n\n` +
+                `配置完成后需要完全重启 Claude Desktop。`,
+            },
+          ],
+          isError: true,
+        };
       }
 
-      initializePool(connectionName, config);
-
-      // 测试连接
+      // 测试连接是否可用
       const connection = await getConnection(connectionName);
       await connection.ping();
       connection.release();
 
-      const isFirstConnection = pools.size === 1;
-      const statusMsg = isFirstConnection
-        ? " (已设为当前活动连接)"
-        : currentConnection === connectionName
-        ? " (已设为当前活动连接)"
-        : ` (当前活动连接: ${currentConnection})`;
+      // 设为当前活动连接
+      const previousConnection = currentConnection;
+      currentConnection = connectionName;
+
+      const config = connectionConfigs.get(connectionName);
+      const statusMsg = previousConnection && previousConnection !== connectionName
+        ? ` (切换自: ${previousConnection})`
+        : "";
 
       return {
         content: [
           {
             type: "text",
-            text: `✅ 成功连接到MySQL数据库\n连接名称: ${connectionName}\n地址: ${config.host}:${config.port}${config.database ? `\n数据库: ${config.database}` : ""}${statusMsg}`,
+            text: `✅ 成功连接到MySQL数据源\n连接名称: ${connectionName}\n地址: ${config?.host}:${config?.port}${config?.database ? `\n数据库: ${config.database}` : ""}${statusMsg}\n\n当前活动连接: ${connectionName}`,
           },
         ],
       };
@@ -230,7 +256,16 @@ server.tool(
         content: [
           {
             type: "text",
-            text: `❌ 连接失败: ${error instanceof Error ? error.message : String(error)}`,
+            text: 
+              `❌ 连接数据源 "${connectionName}" 失败: ${error instanceof Error ? error.message : String(error)}\n\n` +
+              `请检查:\n` +
+              `1. 环境变量 MYSQL_DATASOURCES 中的连接信息是否正确\n` +
+              `2. MySQL服务器是否正在运行且可访问\n` +
+              `3. 用户名和密码是否正确\n` +
+              `4. 网络连接是否正常\n\n` +
+              `配置文件位置:\n` +
+              `- macOS: ~/Library/Application Support/Claude/claude_desktop_config.json\n` +
+              `- Windows: %APPDATA%\\Claude\\claude_desktop_config.json`,
           },
         ],
         isError: true,
@@ -292,7 +327,7 @@ server.tool(
   "执行SQL语句(INSERT, UPDATE, DELETE等修改操作)。\n\n" +
   "⚠️ 危险模式保护: 执行危险操作(INSERT/UPDATE/DELETE/DROP/ALTER等)需要在配置中启用 MYSQL_DANGER_MODE。\n" +
   "这是为了防止意外的数据修改或删除操作。\n\n" +
-  "配置方式: 在 Claude Desktop 配置文件的 env 中设置 \"MYSQL_DANGER_MODE\": \"true\"",
+  "配置方式: 在 MCP 配置文件的 env 中设置 \"MYSQL_DANGER_MODE\": \"true\"",
   {
     sql: z.string().describe("要执行的SQL语句"),
     database: z.string().optional().describe("切换到指定数据库(可选)"),
@@ -311,16 +346,13 @@ server.tool(
               type: "text",
               text:
                 "⚠️ 安全警告: 检测到危险SQL操作(INSERT/UPDATE/DELETE/DROP/ALTER等)。\n\n" +
-                "为了安全起见，执行此类操作需要在 Claude Desktop 配置中启用全局危险模式。\n\n" +
+                "为了安全起见，执行此类操作需要在 MCP 配置中启用全局危险模式。\n\n" +
                 "配置方法:\n" +
-                "1. 打开 Claude Desktop 配置文件:\n" +
-                "   - macOS: ~/Library/Application Support/Claude/claude_desktop_config.json\n" +
-                "   - Windows: %APPDATA%\\Claude\\claude_desktop_config.json\n\n" +
+                "1. 打开 MCP 配置文件:\n" +
                 "2. 在 mysql 服务器配置中添加:\n" +
                 '   "env": {\n' +
                 '     "MYSQL_DANGER_MODE": "true"\n' +
                 '   }\n\n' +
-                "3. 完全重启 Claude Desktop\n\n" +
                 "⚠️ 注意: 启用危险模式后，所有修改操作将无需确认。生产环境请谨慎使用！",
             },
           ],
