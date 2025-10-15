@@ -142,48 +142,40 @@ claude mcp add --transport stdio mysql-mcp --scope user \
 
 #### 📚 基础操作
 
-1. **连接数据库 (使用连接字符串)**:
+1. **连接数据库 (从预配置数据源)**:
    ```
-   使用连接字符串 root:password@localhost:3306/test 连接到MySQL数据库
+   连接到名为 dev 的数据源
    ```
+   
+   ⚠️ **注意**: `connect` 工具只能连接到通过环境变量 `MYSQL_DATASOURCES` 预配置的数据源。
+   如需添加新数据源，请在配置文件中修改 `MYSQL_DATASOURCES` 环境变量并重启 Claude Code。
 
-   连接字符串格式: `username:password@host:port/database`
-   - port 和 database 是可选的
-   - 示例: `root:password@localhost` (使用默认端口3306)
-   - 示例: `root:password@localhost:3306/test` (指定端口和数据库)
-   - 示例: `root:password@localhost/test` (使用默认端口3306,指定数据库)
-
-2. **连接数据库 (使用独立参数)**:
-   ```
-   连接到MySQL数据库,地址是localhost,端口3306,用户名root,密码password,数据库test
-   ```
-
-3. **查询数据**:
+2. **查询数据**:
    ```
    查询test数据库中users表的所有数据
    ```
 
-4. **列出数据库**:
+3. **列出数据库**:
    ```
    列出所有可用的数据库
    ```
 
-5. **查看表结构**:
+4. **查看表结构**:
    ```
    查看users表的结构
    ```
 
-6. **执行插入操作** (需要危险模式):
+5. **执行插入操作** (需要危险模式):
    ```
    向users表插入一条记录,name为'John',age为30,并启用危险模式
    ```
 
-7. **执行更新操作** (需要危险模式):
+6. **执行更新操作** (需要危险模式):
    ```
    更新users表中id为1的记录,设置age为31,启用危险模式
    ```
 
-8. **查看执行计划**:
+7. **查看执行计划**:
    ```
    查看这条SQL语句的执行计划: SELECT * FROM users WHERE age > 25
    ```
@@ -224,25 +216,39 @@ claude mcp add --transport stdio mysql-mcp --scope user \
 ### 🔌 连接管理工具
 
 #### connect 🔗
-建立命名数据库连接,支持同时管理多个连接
+连接到预配置的 MySQL 数据源
+
+⚠️ **重要**: 此工具只能连接到通过环境变量 `MYSQL_DATASOURCES` 预配置的数据源。服务器启动时会自动初始化所有预配置的连接。
 
 **参数**:
-- `connectionName` (string, 默认"default") - 连接的唯一标识符,用于区分不同的数据库连接
-- `connectionString` (string, 可选) - 格式: `username:password@host:port/database`
-  - port 和 database 是可选的,默认端口为3306
-  - 示例: `root:password@localhost`
-  - 示例: `root:password@localhost:3306/mydb`
-  - 示例: `root:password@localhost/mydb`
-- `host` (string, 可选) - MySQL服务器地址
-- `port` (number, 可选, 默认3306) - MySQL服务器端口
-- `user` (string, 可选) - MySQL用户名
-- `password` (string, 可选) - MySQL密码
-- `database` (string, 可选) - 数据库名称
+- `connectionName` (string, 必需) - 要连接的数据源名称（必须是在环境变量 `MYSQL_DATASOURCES` 中预配置的名称）
 
-**注意**:
-- 优先使用 `connectionString`,如果提供则忽略其他参数
-- 不使用 `connectionString` 时,必须提供 `host`、`user` 和 `password`
-- 第一个建立的连接会自动设为当前活动连接
+**功能说明**:
+- 连接到预配置数据源并设为当前活动连接
+- 验证连接是否可用
+- 自动处理连接切换
+
+**配置数据源**:
+在配置文件的 `env` 中设置 `MYSQL_DATASOURCES`：
+```json
+{
+  "env": {
+    "MYSQL_DATASOURCES": "|dev|root:password@localhost:3306/mydb;|prod|user:pass@prod.example.com/database"
+  }
+}
+```
+
+**数据源格式**: `|连接名|username:password@host:port/database`
+- port 和 database 是可选的，默认端口为 3306
+- 多个数据源用分号(;)分隔
+- 示例: `|local|root:pass@localhost`
+- 示例: `|prod|user:pass@192.168.1.100:3306/mydb`
+
+**注意事项**:
+- 服务器启动时会自动连接所有预配置的数据源
+- 第一个成功连接的数据源会自动设为当前活动连接
+- 如需添加新数据源，需修改配置文件并重启服务
+- 连接失败时会提供详细的配置指导
 
 #### list_connections 📋
 列出所有已建立的数据库连接及其状态
